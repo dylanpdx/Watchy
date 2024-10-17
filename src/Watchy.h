@@ -35,6 +35,8 @@
   #include "WatchyRTC.h"
 #endif
 
+enum class WatchyButton { NONE=0,BACK = 1, UP = 2, DOWN = 3, MENU = 4 };
+
 typedef struct weatherData {
   int8_t temperature;
   int16_t weatherConditionCode;
@@ -81,9 +83,10 @@ public:
   uint8_t getBoardRevision();
   void vibMotor(uint8_t intervalMs = 100, uint8_t length = 20);
 
-  virtual void handleButtonPress();
-  void showMenu(byte menuIndex, bool partialRefresh);
-  void showFastMenu(byte menuIndex);
+  virtual void handleButtonPress(WatchyButton buttonPressed);
+  virtual void handleButtonWakeup();
+  void showMenu(bool partialRefresh);
+  void showFastMenu();
   void showAbout();
   void showBuzz();
   void showAccelerometer();
@@ -114,7 +117,6 @@ private:
 };
 
 extern RTC_DATA_ATTR int guiState;
-extern RTC_DATA_ATTR int menuIndex;
 extern RTC_DATA_ATTR BMA423 sensor;
 extern RTC_DATA_ATTR bool WIFI_CONFIGURED;
 extern RTC_DATA_ATTR bool BLE_CONFIGURED;
