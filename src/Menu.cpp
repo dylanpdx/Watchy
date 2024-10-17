@@ -6,7 +6,7 @@ void Menu::moveCursor(uint8_t direction) {
     } else if (direction == MENU_DIR_DOWN) { // down
         cursor = (cursor + 1) % MENU_LENGTH;
     } else if (direction == MENU_DIR_UP) { // up
-        cursor = (cursor + 4) % MENU_LENGTH;
+        cursor = (cursor + (MENU_LENGTH-1)) % MENU_LENGTH;
     }
 }
 
