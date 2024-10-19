@@ -1,10 +1,10 @@
-#ifndef APP_BUZZ_H
-#define APP_BUZZ_H
+#ifndef APP_ABOUT_H
+#define APP_ABOUT_H
 #include "../WatchyApp.h"
 
-class BuzzApp : public WatchyApp {
+class AboutApp : public WatchyApp {
 public:
-    BuzzApp(Watchy *watchy) : WatchyApp(watchy) {}
+    AboutApp(Watchy *watchy) : WatchyApp(watchy) {}
     void init() override;
     void render();
     void destroy() override;

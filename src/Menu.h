@@ -14,13 +14,13 @@ class Menu{
             this->cursor = 0;
             this->watchy = watchy;
             this->menuItems = new MenuItem*[MENU_LENGTH] {
-                new MenuItem("About Watchy", &Watchy::showAbout),
+                new MenuItem("About Watchy", ABOUT_APP),
                 new MenuItem("Vibrate Motor", BUZZ_APP),
-                new MenuItem("Show Accelerometer", &Watchy::showAccelerometer),
-                new MenuItem("Set Time", &Watchy::setTime),
-                new MenuItem("Setup WiFi", &Watchy::setupWifi),
-                new MenuItem("Update Firmware", &Watchy::showUpdateFW),
-                new MenuItem("Sync NTP", &Watchy::showSyncNTP),
+                new MenuItem("Show Accelerometer", ACCEL_APP),
+                new MenuItem("Set Time", TIME_SET_APP),
+                new MenuItem("Setup WiFi", WIFI_SETUP_APP),
+                new MenuItem("Update Firmware", UPDATE_APP),
+                new MenuItem("Sync NTP", NTP_APP),
             };
         }
         void renderMenu(bool partialRefresh);

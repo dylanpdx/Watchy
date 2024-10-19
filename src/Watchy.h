@@ -84,27 +84,22 @@ public:
   void vibMotor(uint8_t intervalMs = 100, uint8_t length = 20);
 
   // App Handling
-  void closeCurrentApp();
   void onAppExit();
   void launchApp(uint8_t appId);
 
   virtual void handleButtonPress(WatchyButton buttonPressed);
   virtual void handleButtonWakeup();
+  bool pollButtons();
   void showMenu(bool partialRefresh);
   void showFastMenu();
   void showAbout();
-  void showBuzz();
-  void showAccelerometer();
-  void showUpdateFW();
-  void showSyncNTP();
   bool syncNTP();
   bool syncNTP(long gmt);
   bool syncNTP(long gmt, String ntpServer);
-  void setTime();
-  void setupWifi();
+  void UpdateWifi();
   bool connectWiFi();
   weatherData getWeatherData();
-  void updateFWBegin();
+  RTC_DATA_ATTR long getLocalTimeOffset();
 
   void showWatchFace(bool partialRefresh);
   virtual void drawWatchFace(); // override this method for different watch
@@ -112,13 +107,14 @@ public:
 
 private:
   void _bmaConfig();
-  static void _configModeCallback(WiFiManager *myWiFiManager);
   static uint16_t _readRegister(uint8_t address, uint8_t reg, uint8_t *data,
                                 uint16_t len);
   static uint16_t _writeRegister(uint8_t address, uint8_t reg, uint8_t *data,
                                  uint16_t len);
   weatherData _getWeatherData(String cityID, String lat, String lon, String units, String lang,
-                             String url, String apiKey, uint8_t updateInterval);                                 
+                             String url, String apiKey, uint8_t updateInterval);                 
+
+  void closeCurrentApp();                
 };
 
 extern RTC_DATA_ATTR int guiState;

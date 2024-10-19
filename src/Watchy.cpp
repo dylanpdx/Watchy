@@ -2,8 +2,6 @@
 #include "Menu.h"
 #include "WatchyApp.h"
 
-#include "apps/BuzzApp.h"
-
 #ifdef ARDUINO_ESP32S3_DEV
   Watchy32KRTC Watchy::RTC;
   #define ACTIVE_LOW 0
@@ -162,34 +160,45 @@ void Watchy::handleButtonWakeup() {
     if (millis() - lastTimeout > 5000) {
       timeout = true;
     } else {
-      if (digitalRead(MENU_BTN_PIN) == ACTIVE_LOW) {
+      if (pollButtons()) {
         lastTimeout = millis();
-        handleButtonPress(WatchyButton::MENU);
-      } else if (digitalRead(BACK_BTN_PIN) == ACTIVE_LOW) {
-        lastTimeout = millis();
-        handleButtonPress(WatchyButton::BACK);
-      } else if (digitalRead(UP_BTN_PIN) == ACTIVE_LOW) {
-        lastTimeout = millis();
-        handleButtonPress(WatchyButton::UP);
-      } else if (digitalRead(DOWN_BTN_PIN) == ACTIVE_LOW) {
-        lastTimeout = millis();
-        handleButtonPress(WatchyButton::DOWN);
       }
     }
   }
 }
 
+bool Watchy::pollButtons(){
+    pinMode(MENU_BTN_PIN, INPUT);
+    pinMode(BACK_BTN_PIN, INPUT);
+    pinMode(UP_BTN_PIN, INPUT);
+    pinMode(DOWN_BTN_PIN, INPUT);
+
+    if (digitalRead(MENU_BTN_PIN) == ACTIVE_LOW) {
+      handleButtonPress(WatchyButton::MENU);
+    } else if (digitalRead(BACK_BTN_PIN) == ACTIVE_LOW) {
+      handleButtonPress(WatchyButton::BACK);
+    } else if (digitalRead(UP_BTN_PIN) == ACTIVE_LOW) {
+      handleButtonPress(WatchyButton::UP);
+    } else if (digitalRead(DOWN_BTN_PIN) == ACTIVE_LOW) {
+      handleButtonPress(WatchyButton::DOWN);
+    }
+    return false;
+}
+
 void Watchy::handleButtonPress(WatchyButton buttonPressed) {
+
+  // if in app, handle button press in app
+  if (guiState == APP_STATE && currentApp != NULL) {
+    currentApp->handleButtonPress(buttonPressed);
+    return;
+  }
+
   // Menu Button
   if (buttonPressed == WatchyButton::MENU) {
-    if (guiState ==
-        WATCHFACE_STATE) { // enter menu state if coming from watch face
+    if (guiState == WATCHFACE_STATE) { // enter menu state if coming from watch face
       showMenu(false);
     } else if (guiState == MAIN_MENU_STATE) { // if already in menu, then select menu item
       watchyMenu->getSelectedItem()->executeHandler(*this);
-
-    } else if (guiState == FW_UPDATE_STATE) {
-      updateFWBegin();
     }
   }
   // Back Button
@@ -197,10 +206,6 @@ void Watchy::handleButtonPress(WatchyButton buttonPressed) {
     if (guiState == MAIN_MENU_STATE) { // exit to watch face if already in menu
       RTC.read(currentTime);
       showWatchFace(false);
-    } else if (guiState == APP_STATE) {
-      showMenu(false); // exit to menu if already in app
-    } else if (guiState == FW_UPDATE_STATE) {
-      showMenu(false); // exit to menu if already in app
     } else if (guiState == WATCHFACE_STATE) {
       return;
     }
@@ -239,52 +244,7 @@ void Watchy::showFastMenu() {
 }
 
 void Watchy::showAbout() {
-  display.setFullWindow();
-  display.fillScreen(GxEPD_BLACK);
-  display.setFont(&FreeMonoBold9pt7b);
-  display.setTextColor(GxEPD_WHITE);
-  display.setCursor(0, 20);
 
-  display.print("LibVer: ");
-  display.println(WATCHY_LIB_VER);
-
-  display.print("Rev: v");
-  display.println(getBoardRevision());
-
-  display.print("Batt: ");
-  float voltage = getBatteryVoltage();
-  display.print(voltage);
-  display.println("V");
-
-  #ifndef ARDUINO_ESP32S3_DEV
-  display.print("Uptime: ");
-  RTC.read(currentTime);
-  time_t b = makeTime(bootTime);
-  time_t c = makeTime(currentTime);
-  int totalSeconds = c-b;
-  //int seconds = (totalSeconds % 60);
-  int minutes = (totalSeconds % 3600) / 60;
-  int hours = (totalSeconds % 86400) / 3600;
-  int days = (totalSeconds % (86400 * 30)) / 86400; 
-  display.print(days);
-  display.print("d");
-  display.print(hours);
-  display.print("h");
-  display.print(minutes);
-  display.println("m");  
-  #endif
-  
-  if(WIFI_CONFIGURED){
-    display.print("SSID: ");
-    display.println(lastSSID);
-    display.print("IP: ");
-    display.println(IPAddress(lastIPAddress).toString());
-  }else{
-    display.println("WiFi Not Connected");
-  }
-  display.display(false); // full refresh
-
-  guiState = APP_STATE;
 }
 
 void Watchy::vibMotor(uint8_t intervalMs, uint8_t length) {
@@ -295,246 +255,6 @@ void Watchy::vibMotor(uint8_t intervalMs, uint8_t length) {
     digitalWrite(VIB_MOTOR_PIN, motorOn);
     delay(intervalMs);
   }
-}
-
-void Watchy::setTime() {
-
-  guiState = APP_STATE;
-
-  RTC.read(currentTime);
-
-  #ifdef ARDUINO_ESP32S3_DEV
-  uint8_t minute = currentTime.Minute;
-  uint8_t hour   = currentTime.Hour;
-  uint8_t day    = currentTime.Day;
-  uint8_t month  = currentTime.Month;
-  uint8_t year   = currentTime.Year;  
-  #else
-  int8_t minute = currentTime.Minute;
-  int8_t hour   = currentTime.Hour;
-  int8_t day    = currentTime.Day;
-  int8_t month  = currentTime.Month;
-  int8_t year   = tmYearToY2k(currentTime.Year);
-  #endif
-
-  int8_t setIndex = SET_HOUR;
-
-  int8_t blink = 0;
-
-  pinMode(DOWN_BTN_PIN, INPUT);
-  pinMode(UP_BTN_PIN, INPUT);
-  pinMode(MENU_BTN_PIN, INPUT);
-  pinMode(BACK_BTN_PIN, INPUT);
-
-  display.setFullWindow();
-
-  while (1) {
-
-    if (digitalRead(MENU_BTN_PIN) == ACTIVE_LOW) {
-      setIndex++;
-      if (setIndex > SET_DAY) {
-        break;
-      }
-    }
-    if (digitalRead(BACK_BTN_PIN) == ACTIVE_LOW) {
-      if (setIndex != SET_HOUR) {
-        setIndex--;
-      }
-    }
-
-    blink = 1 - blink;
-
-    if (digitalRead(DOWN_BTN_PIN) == ACTIVE_LOW) {
-      blink = 1;
-      switch (setIndex) {
-      case SET_HOUR:
-        hour == 23 ? (hour = 0) : hour++;
-        break;
-      case SET_MINUTE:
-        minute == 59 ? (minute = 0) : minute++;
-        break;
-      case SET_YEAR:
-        year == 99 ? (year = 0) : year++;
-        break;
-      case SET_MONTH:
-        month == 12 ? (month = 1) : month++;
-        break;
-      case SET_DAY:
-        day == 31 ? (day = 1) : day++;
-        break;
-      default:
-        break;
-      }
-    }
-
-    if (digitalRead(UP_BTN_PIN) == ACTIVE_LOW) {
-      blink = 1;
-      switch (setIndex) {
-      case SET_HOUR:
-        hour == 0 ? (hour = 23) : hour--;
-        break;
-      case SET_MINUTE:
-        minute == 0 ? (minute = 59) : minute--;
-        break;
-      case SET_YEAR:
-        year == 0 ? (year = 99) : year--;
-        break;
-      case SET_MONTH:
-        month == 1 ? (month = 12) : month--;
-        break;
-      case SET_DAY:
-        day == 1 ? (day = 31) : day--;
-        break;
-      default:
-        break;
-      }
-    }
-
-    display.fillScreen(GxEPD_BLACK);
-    display.setTextColor(GxEPD_WHITE);
-    display.setFont(&DSEG7_Classic_Bold_53);
-
-    display.setCursor(5, 80);
-    if (setIndex == SET_HOUR) { // blink hour digits
-      display.setTextColor(blink ? GxEPD_WHITE : GxEPD_BLACK);
-    }
-    if (hour < 10) {
-      display.print("0");
-    }
-    display.print(hour);
-
-    display.setTextColor(GxEPD_WHITE);
-    display.print(":");
-
-    display.setCursor(108, 80);
-    if (setIndex == SET_MINUTE) { // blink minute digits
-      display.setTextColor(blink ? GxEPD_WHITE : GxEPD_BLACK);
-    }
-    if (minute < 10) {
-      display.print("0");
-    }
-    display.print(minute);
-
-    display.setTextColor(GxEPD_WHITE);
-
-    display.setFont(&FreeMonoBold9pt7b);
-    display.setCursor(45, 150);
-    if (setIndex == SET_YEAR) { // blink minute digits
-      display.setTextColor(blink ? GxEPD_WHITE : GxEPD_BLACK);
-    }
-    display.print(2000 + year);
-
-    display.setTextColor(GxEPD_WHITE);
-    display.print("/");
-
-    if (setIndex == SET_MONTH) { // blink minute digits
-      display.setTextColor(blink ? GxEPD_WHITE : GxEPD_BLACK);
-    }
-    if (month < 10) {
-      display.print("0");
-    }
-    display.print(month);
-
-    display.setTextColor(GxEPD_WHITE);
-    display.print("/");
-
-    if (setIndex == SET_DAY) { // blink minute digits
-      display.setTextColor(blink ? GxEPD_WHITE : GxEPD_BLACK);
-    }
-    if (day < 10) {
-      display.print("0");
-    }
-    display.print(day);
-    display.display(true); // partial refresh
-  }
-
-  tmElements_t tm;
-  tm.Month  = month;
-  tm.Day    = day;
-  #ifdef ARDUINO_ESP32S3_DEV
-  tm.Year   = year;
-  #else
-  tm.Year   = y2kYearToTm(year);
-  #endif
-  tm.Hour   = hour;
-  tm.Minute = minute;
-  tm.Second = 0;
-
-  RTC.set(tm);
-
-  showMenu(false);
-}
-
-void Watchy::showAccelerometer() {
-  display.setFullWindow();
-  display.fillScreen(GxEPD_BLACK);
-  display.setFont(&FreeMonoBold9pt7b);
-  display.setTextColor(GxEPD_WHITE);
-
-  Accel acc;
-
-  long previousMillis = 0;
-  long interval       = 200;
-
-  guiState = APP_STATE;
-
-  pinMode(BACK_BTN_PIN, INPUT);
-
-  while (1) {
-
-    unsigned long currentMillis = millis();
-
-    if (digitalRead(BACK_BTN_PIN) == ACTIVE_LOW) {
-      break;
-    }
-
-    if (currentMillis - previousMillis > interval) {
-      previousMillis = currentMillis;
-      // Get acceleration data
-      bool res          = sensor.getAccel(acc);
-      uint8_t direction = sensor.getDirection();
-      display.fillScreen(GxEPD_BLACK);
-      display.setCursor(0, 30);
-      if (res == false) {
-        display.println("getAccel FAIL");
-      } else {
-        display.print("  X:");
-        display.println(acc.x);
-        display.print("  Y:");
-        display.println(acc.y);
-        display.print("  Z:");
-        display.println(acc.z);
-
-        display.setCursor(30, 130);
-        switch (direction) {
-        case DIRECTION_DISP_DOWN:
-          display.println("FACE DOWN");
-          break;
-        case DIRECTION_DISP_UP:
-          display.println("FACE UP");
-          break;
-        case DIRECTION_BOTTOM_EDGE:
-          display.println("BOTTOM EDGE");
-          break;
-        case DIRECTION_TOP_EDGE:
-          display.println("TOP EDGE");
-          break;
-        case DIRECTION_RIGHT_EDGE:
-          display.println("RIGHT EDGE");
-          break;
-        case DIRECTION_LEFT_EDGE:
-          display.println("LEFT EDGE");
-          break;
-        default:
-          display.println("ERROR!!!");
-          break;
-        }
-      }
-      display.display(true); // full refresh
-    }
-  }
-
-  showMenu(false);
 }
 
 void Watchy::showWatchFace(bool partialRefresh) {
@@ -783,53 +503,6 @@ void Watchy::_bmaConfig() {
   sensor.enableWakeupInterrupt();
 }
 
-void Watchy::setupWifi() {
-  display.epd2.setBusyCallback(0); // temporarily disable lightsleep on busy
-  WiFiManager wifiManager;
-  wifiManager.resetSettings();
-  wifiManager.setTimeout(WIFI_AP_TIMEOUT);
-  wifiManager.setAPCallback(_configModeCallback);
-  display.setFullWindow();
-  display.fillScreen(GxEPD_BLACK);
-  display.setFont(&FreeMonoBold9pt7b);
-  display.setTextColor(GxEPD_WHITE);
-  if (!wifiManager.autoConnect(WIFI_AP_SSID)) { // WiFi setup failed
-    display.println("Setup failed &");
-    display.println("timed out!");
-  } else {
-    display.println("Connected to:");
-    display.println(WiFi.SSID());
-		display.println("Local IP:");
-		display.println(WiFi.localIP());
-    weatherIntervalCounter = -1; // Reset to force weather to be read again
-    lastIPAddress = WiFi.localIP();
-    WiFi.SSID().toCharArray(lastSSID, 30);
-  }
-  display.display(false); // full refresh
-  // turn off radios
-  WiFi.mode(WIFI_OFF);
-  btStop();
-  // enable lightsleep on busy
-  display.epd2.setBusyCallback(WatchyDisplay::busyCallback);
-  guiState = APP_STATE;
-}
-
-void Watchy::_configModeCallback(WiFiManager *myWiFiManager) {
-  display.setFullWindow();
-  display.fillScreen(GxEPD_BLACK);
-  display.setFont(&FreeMonoBold9pt7b);
-  display.setTextColor(GxEPD_WHITE);
-  display.setCursor(0, 30);
-  display.println("Connect to");
-  display.print("SSID: ");
-  display.println(WIFI_AP_SSID);
-  display.print("IP: ");
-  display.println(WiFi.softAPIP());
-	display.println("MAC address:");
-	display.println(WiFi.softAPmacAddress().c_str());
-  display.display(false); // full refresh
-}
-
 bool Watchy::connectWiFi() {
   if (WL_CONNECT_FAILED ==
       WiFi.begin()) { // WiFi not setup, you can also use hard coded credentials
@@ -851,154 +524,14 @@ bool Watchy::connectWiFi() {
   return WIFI_CONFIGURED;
 }
 
-void Watchy::showUpdateFW() {
-  display.setFullWindow();
-  display.fillScreen(GxEPD_BLACK);
-  display.setFont(&FreeMonoBold9pt7b);
-  display.setTextColor(GxEPD_WHITE);
-  display.setCursor(0, 30);
-  display.println("Please visit");
-  display.println("watchy.sqfmi.com");
-  display.println("with a Bluetooth");
-  display.println("enabled device");
-  display.println(" ");
-  display.println("Press menu button");
-  display.println("again when ready");
-  display.println(" ");
-  display.println("Keep USB powered");
-  display.display(false); // full refresh
-
-  guiState = FW_UPDATE_STATE;
+void Watchy::UpdateWifi(){
+  weatherIntervalCounter = -1; // Reset to force weather to be read again
+  lastIPAddress = WiFi.localIP();
+  WiFi.SSID().toCharArray(lastSSID, 30);
 }
 
-void Watchy::updateFWBegin() {
-  display.setFullWindow();
-  display.fillScreen(GxEPD_BLACK);
-  display.setFont(&FreeMonoBold9pt7b);
-  display.setTextColor(GxEPD_WHITE);
-  display.setCursor(0, 30);
-  display.println("Bluetooth Started");
-  display.println(" ");
-  display.println("Watchy BLE OTA");
-  display.println(" ");
-  display.println("Waiting for");
-  display.println("connection...");
-  display.display(false); // full refresh
-
-  BLE BT;
-  BT.begin("Watchy BLE OTA");
-  int prevStatus = -1;
-  int currentStatus;
-
-  while (1) {
-    currentStatus = BT.updateStatus();
-    if (prevStatus != currentStatus || prevStatus == 1) {
-      if (currentStatus == 0) {
-        display.setFullWindow();
-        display.fillScreen(GxEPD_BLACK);
-        display.setFont(&FreeMonoBold9pt7b);
-        display.setTextColor(GxEPD_WHITE);
-        display.setCursor(0, 30);
-        display.println("BLE Connected!");
-        display.println(" ");
-        display.println("Waiting for");
-        display.println("upload...");
-        display.display(false); // full refresh
-      }
-      if (currentStatus == 1) {
-        display.setFullWindow();
-        display.fillScreen(GxEPD_BLACK);
-        display.setFont(&FreeMonoBold9pt7b);
-        display.setTextColor(GxEPD_WHITE);
-        display.setCursor(0, 30);
-        display.println("Downloading");
-        display.println("firmware:");
-        display.println(" ");
-        display.print(BT.howManyBytes());
-        display.println(" bytes");
-        display.display(true); // partial refresh
-      }
-      if (currentStatus == 2) {
-        display.setFullWindow();
-        display.fillScreen(GxEPD_BLACK);
-        display.setFont(&FreeMonoBold9pt7b);
-        display.setTextColor(GxEPD_WHITE);
-        display.setCursor(0, 30);
-        display.println("Download");
-        display.println("completed!");
-        display.println(" ");
-        display.println("Rebooting...");
-        display.display(false); // full refresh
-
-        delay(2000);
-        esp_restart();
-      }
-      if (currentStatus == 4) {
-        display.setFullWindow();
-        display.fillScreen(GxEPD_BLACK);
-        display.setFont(&FreeMonoBold9pt7b);
-        display.setTextColor(GxEPD_WHITE);
-        display.setCursor(0, 30);
-        display.println("BLE Disconnected!");
-        display.println(" ");
-        display.println("exiting...");
-        display.display(false); // full refresh
-        delay(1000);
-        break;
-      }
-      prevStatus = currentStatus;
-    }
-    delay(100);
-  }
-
-  // turn off radios
-  WiFi.mode(WIFI_OFF);
-  btStop();
-  showMenu(false);
-}
-
-void Watchy::showSyncNTP() {
-  display.setFullWindow();
-  display.fillScreen(GxEPD_BLACK);
-  display.setFont(&FreeMonoBold9pt7b);
-  display.setTextColor(GxEPD_WHITE);
-  display.setCursor(0, 30);
-  display.println("Syncing NTP... ");
-  display.print("GMT offset: ");
-  display.println(gmtOffset);
-  display.display(false); // full refresh
-  if (connectWiFi()) {
-    if (syncNTP()) {
-      display.println("NTP Sync Success\n");
-      display.println("Current Time Is:");
-
-      RTC.read(currentTime);
-
-      display.print(tmYearToCalendar(currentTime.Year));
-      display.print("/");
-      display.print(currentTime.Month);
-      display.print("/");
-      display.print(currentTime.Day);
-      display.print(" - ");
-
-      if (currentTime.Hour < 10) {
-        display.print("0");
-      }
-      display.print(currentTime.Hour);
-      display.print(":");
-      if (currentTime.Minute < 10) {
-        display.print("0");
-      }
-      display.println(currentTime.Minute);
-    } else {
-      display.println("NTP Sync Failed");
-    }
-  } else {
-    display.println("WiFi Not Configured");
-  }
-  display.display(true); // full refresh
-  delay(3000);
-  showMenu(false);
+RTC_DATA_ATTR long Watchy::getLocalTimeOffset() {
+  return gmtOffset;
 }
 
 bool Watchy::syncNTP() { // NTP sync - call after connecting to WiFi and
@@ -1038,6 +571,7 @@ void Watchy::closeCurrentApp(){
 void Watchy::onAppExit(){
   closeCurrentApp();
   showMenu(false);
+  guiState = MAIN_MENU_STATE;
 }
 
 void Watchy::launchApp(uint8_t appId){
@@ -1047,6 +581,7 @@ void Watchy::launchApp(uint8_t appId){
       closeCurrentApp();
     }
     currentApp = app;
+    guiState = APP_STATE;
     app->init();
   }
 }
