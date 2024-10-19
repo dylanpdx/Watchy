@@ -24,11 +24,13 @@ RTC_DATA_ATTR bool USB_PLUGGED_IN = false;
 RTC_DATA_ATTR tmElements_t bootTime;
 RTC_DATA_ATTR uint32_t lastIPAddress;
 RTC_DATA_ATTR char lastSSID[30];
-Menu *watchyMenu;
+Menu *watchyMenu=NULL;
 WatchyApp *currentApp = NULL;
 
 void Watchy::init(String datetime) {
-  watchyMenu = new Menu(this);
+  if (watchyMenu == NULL) {
+    watchyMenu = new Menu(this);
+  }
   esp_sleep_wakeup_cause_t wakeup_reason;
   wakeup_reason = esp_sleep_get_wakeup_cause(); // get wake up reason
   #ifdef ARDUINO_ESP32S3_DEV

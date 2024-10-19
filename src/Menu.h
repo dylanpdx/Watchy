@@ -8,10 +8,11 @@
 #define MENU_DIR_UP 1
 #define MENU_DIR_DOWN 2
 
+#define MENU_ITEMS_PER_PAGE 7//(200 - MENU_HEIGHT)/MENU_HEIGHT
+
 class Menu{
     public:
         Menu(const Watchy *watchy){
-            this->cursor = 0;
             this->watchy = watchy;
             this->menuItems = new MenuItem*[MENU_LENGTH] {
                 new MenuItem("About Watchy", ABOUT_APP),
@@ -27,7 +28,6 @@ class Menu{
         void moveCursor(uint8_t direction);
         MenuItem* getSelectedItem();
     private:
-        uint8_t cursor;
         MenuItem** menuItems;
         const Watchy *watchy = NULL;
 };

@@ -99,7 +99,7 @@ public:
   void UpdateWifi();
   bool connectWiFi();
   weatherData getWeatherData();
-  RTC_DATA_ATTR long getLocalTimeOffset();
+  long getLocalTimeOffset();
 
   void showWatchFace(bool partialRefresh);
   virtual void drawWatchFace(); // override this method for different watch
