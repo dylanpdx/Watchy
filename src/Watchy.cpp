@@ -177,12 +177,16 @@ bool Watchy::pollButtons(){
 
     if (digitalRead(MENU_BTN_PIN) == ACTIVE_LOW) {
       handleButtonPress(WatchyButton::MENU);
+      return true;
     } else if (digitalRead(BACK_BTN_PIN) == ACTIVE_LOW) {
       handleButtonPress(WatchyButton::BACK);
+      return true;
     } else if (digitalRead(UP_BTN_PIN) == ACTIVE_LOW) {
       handleButtonPress(WatchyButton::UP);
+      return true;
     } else if (digitalRead(DOWN_BTN_PIN) == ACTIVE_LOW) {
       handleButtonPress(WatchyButton::DOWN);
+      return true;
     }
     return false;
 }

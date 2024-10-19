@@ -57,14 +57,13 @@ void Menu::renderMenu(bool partialRefresh) {
         }
     }
 
-    // todo: figure out why this is not working
     if (firstVisibleItem > 0) {
-        watchy->display.setCursor(0, MENU_HEIGHT - 20);
-        watchy->display.setTextColor(GxEPD_WHITE);
+        watchy->display.setCursor(0, MENU_HEIGHT - 10);
+        watchy->display.setTextColor(cursor == firstVisibleItem ? GxEPD_BLACK : GxEPD_WHITE);
         watchy->display.println("^");
     }
     if (firstVisibleItem + MENU_ITEMS_PER_PAGE < MENU_LENGTH) {
-        watchy->display.setCursor(0, MENU_HEIGHT + (MENU_HEIGHT * MENU_ITEMS_PER_PAGE) + 20);
+        watchy->display.setCursor(0, MENU_HEIGHT + (MENU_HEIGHT * MENU_ITEMS_PER_PAGE) - 12);
         watchy->display.setTextColor(GxEPD_WHITE);
         watchy->display.println("v");
     }
