@@ -83,6 +83,11 @@ public:
   uint8_t getBoardRevision();
   void vibMotor(uint8_t intervalMs = 100, uint8_t length = 20);
 
+  // App Handling
+  void closeCurrentApp();
+  void onAppExit();
+  void launchApp(uint8_t appId);
+
   virtual void handleButtonPress(WatchyButton buttonPressed);
   virtual void handleButtonWakeup();
   void showMenu(bool partialRefresh);

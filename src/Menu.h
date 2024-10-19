@@ -13,22 +13,22 @@ class Menu{
         Menu(const Watchy *watchy){
             this->cursor = 0;
             this->watchy = watchy;
-            this->menuItems = new MenuItem[MENU_LENGTH] {
-                MenuItem("About Watchy", &Watchy::showAbout),
-                MenuItem("Vibrate Motor", &Watchy::showBuzz),
-                MenuItem("Show Accelerometer", &Watchy::showAccelerometer),
-                MenuItem("Set Time", &Watchy::setTime),
-                MenuItem("Setup WiFi", &Watchy::setupWifi),
-                MenuItem("Update Firmware", &Watchy::showUpdateFW),
-                MenuItem("Sync NTP", &Watchy::showSyncNTP),
+            this->menuItems = new MenuItem*[MENU_LENGTH] {
+                new MenuItem("About Watchy", &Watchy::showAbout),
+                new MenuItem("Vibrate Motor", BUZZ_APP),
+                new MenuItem("Show Accelerometer", &Watchy::showAccelerometer),
+                new MenuItem("Set Time", &Watchy::setTime),
+                new MenuItem("Setup WiFi", &Watchy::setupWifi),
+                new MenuItem("Update Firmware", &Watchy::showUpdateFW),
+                new MenuItem("Sync NTP", &Watchy::showSyncNTP),
             };
         }
         void renderMenu(bool partialRefresh);
         void moveCursor(uint8_t direction);
-        MenuItem getSelectedItem();
+        MenuItem* getSelectedItem();
     private:
         uint8_t cursor;
-        const MenuItem* menuItems;
+        MenuItem** menuItems;
         const Watchy *watchy = NULL;
 };
 

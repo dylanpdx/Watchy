@@ -1,5 +1,8 @@
 #include "Watchy.h"
 #include "Menu.h"
+#include "WatchyApp.h"
+
+#include "apps/BuzzApp.h"
 
 #ifdef ARDUINO_ESP32S3_DEV
   Watchy32KRTC Watchy::RTC;
@@ -24,6 +27,7 @@ RTC_DATA_ATTR tmElements_t bootTime;
 RTC_DATA_ATTR uint32_t lastIPAddress;
 RTC_DATA_ATTR char lastSSID[30];
 Menu *watchyMenu;
+WatchyApp *currentApp = NULL;
 
 void Watchy::init(String datetime) {
   watchyMenu = new Menu(this);
@@ -182,7 +186,8 @@ void Watchy::handleButtonPress(WatchyButton buttonPressed) {
         WATCHFACE_STATE) { // enter menu state if coming from watch face
       showMenu(false);
     } else if (guiState == MAIN_MENU_STATE) { // if already in menu, then select menu item
-      watchyMenu->getSelectedItem().executeHandler(*this);
+      watchyMenu->getSelectedItem()->executeHandler(*this);
+
     } else if (guiState == FW_UPDATE_STATE) {
       updateFWBegin();
     }
@@ -280,18 +285,6 @@ void Watchy::showAbout() {
   display.display(false); // full refresh
 
   guiState = APP_STATE;
-}
-
-void Watchy::showBuzz() {
-  display.setFullWindow();
-  display.fillScreen(GxEPD_BLACK);
-  display.setFont(&FreeMonoBold9pt7b);
-  display.setTextColor(GxEPD_WHITE);
-  display.setCursor(70, 80);
-  display.println("Buzz!");
-  display.display(false); // full refresh
-  vibMotor();
-  showMenu(false);
 }
 
 void Watchy::vibMotor(uint8_t intervalMs, uint8_t length) {
@@ -1031,4 +1024,29 @@ bool Watchy::syncNTP(long gmt, String ntpServer) {
   breakTime((time_t)timeClient.getEpochTime(), tm);
   RTC.set(tm);
   return true;
+}
+
+void Watchy::closeCurrentApp(){
+  if (currentApp != NULL){
+    currentApp->destroy();
+    // free memory
+    delete currentApp;
+    currentApp = NULL;
+  }
+}
+
+void Watchy::onAppExit(){
+  closeCurrentApp();
+  showMenu(false);
+}
+
+void Watchy::launchApp(uint8_t appId){
+  WatchyApp *app = WatchyApp::getApp(appId, this);
+  if (app != nullptr && currentApp != app){
+    if (currentApp != NULL){
+      closeCurrentApp();
+    }
+    currentApp = app;
+    app->init();
+  }
 }

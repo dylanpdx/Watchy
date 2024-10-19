@@ -10,7 +10,7 @@ void Menu::moveCursor(uint8_t direction) {
     }
 }
 
-MenuItem Menu::getSelectedItem() {
+MenuItem* Menu::getSelectedItem() {
     return menuItems[cursor];
 }
 
@@ -24,7 +24,7 @@ void Menu::renderMenu(bool partialRefresh) {
   int16_t yPos;
 
   for (int i = 0; i < MENU_LENGTH; i++) {
-    const char* itemName = menuItems[i].getName();
+    const char* itemName = menuItems[i]->getName();
     yPos = MENU_HEIGHT + (MENU_HEIGHT * i);
     watchy->display.setCursor(0, yPos);
     if (i == cursor) {
